@@ -1,0 +1,31 @@
+{
+  "album_id": "soundcloud:iyari-c:america",
+  "title": "America",
+  "artist": "Iyari Gomez",
+  "label": "BlackMamba RECORDS",
+  "platform": "soundcloud",
+  "url": "https://soundcloud.com/iyari-c/sets/america",
+  "track_count": 6,
+  "duration": "27:08",
+  "canonical_lyrics": "lyrics.txt",
+  "artwork": {
+    "square": "artwork/america-album-cover.jpg",
+    "wide": "artwork/america-banner-2480x520.png"
+  },
+  "tracks": [
+    {"position": 1, "title": "Águilas", "url": "https://soundcloud.com/iyari-c/aguilas-del-corazon-2-1", "lyrics_present": true, "artwork_present": true, "genre": "Latin"},
+    {"position": 2, "title": "Águilas", "url": "https://soundcloud.com/iyari-c/aguilas-del-corazon-2", "lyrics_present": true, "artwork_present": true, "genre": "Latin"},
+    {"position": 3, "title": "Águilas del Corazón-4", "url": "https://soundcloud.com/iyari-c/aguilas-del-corazon-4-1", "lyrics_present": false, "artwork_present": true, "genre": "Latin", "warning": "SoundCloud reports success but discards description edits"},
+    {"position": 4, "title": "Águilas del Corazón-3", "url": "https://soundcloud.com/iyari-c/aguilas-del-corazon-3-2", "lyrics_present": false, "artwork_present": true, "genre": "Latin", "warning": "SoundCloud reports success but discards description edits"},
+    {"position": 5, "title": "Águilas del Corazón-6", "url": "https://soundcloud.com/iyari-c/aguilas-del-corazon-6-1", "lyrics_present": false, "artwork_present": true, "genre": "Latin", "warning": "SoundCloud reports success but discards description edits"},
+    {"position": 6, "title": "Águilas del Corazón-5", "url": "https://soundcloud.com/iyari-c/aguilas-del-corazon-5-2", "lyrics_present": false, "artwork_present": true, "genre": "Latin", "warning": "SoundCloud reports success but discards description edits"}
+  ],
+  "target_state": {
+    "all_tracks_have_canonical_lyrics": false,
+    "all_tracks_use_album_artwork": true,
+    "album_has_square_cover": true,
+    "album_has_wide_banner": true,
+    "genre": "Latin",
+    "wide_profile_banner_applied": true
+  }
+}
