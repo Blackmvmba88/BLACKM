@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blackm"
+version = "0.1.0"
+description = "BlackMamba Music OS — local-first catalog, rescue, curation and automation infrastructure."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "BlackMamba"}]
+dependencies = []
+
+[project.scripts]
+bm = "blackm.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
