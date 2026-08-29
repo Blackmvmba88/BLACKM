@@ -59,7 +59,8 @@ For supported audio, artwork, lyrics, video and metadata assets:
 - extension and asset kind;
 - file size;
 - SHA-256 content checksum;
-- creation / modification timestamps;
+- creation timestamp when the platform exposes a genuine birth time;
+- modification timestamp;
 - WAV duration, sample rate, channel count and bit depth when readable.
 
 Every scan creates a new immutable snapshot row in SQLite. M0 does not overwrite the previous snapshot.

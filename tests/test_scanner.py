@@ -5,10 +5,11 @@ import tempfile
 import unittest
 import wave
 from pathlib import Path
+from types import SimpleNamespace
 
 from blackm.constants import classify_asset
 from blackm.db import open_database, save_scan
-from blackm.scanner import scan_roots, sha256_file
+from blackm.scanner import _created_ns, scan_roots, sha256_file
 
 
 class VaultScannerTests(unittest.TestCase):
@@ -69,6 +70,24 @@ class VaultScannerTests(unittest.TestCase):
 
             self.assertEqual(scan_count, 1)
             self.assertEqual(asset_count, 1)
+
+    def test_overlapping_roots_do_not_duplicate_the_same_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            album = root / "album"
+            album.mkdir()
+            (album / "track.wav").write_bytes(b"not a valid wav, but still an asset")
+
+            result = scan_roots([root, album], workers=1)
+
+            self.assertEqual(len(result.records), 1)
+            self.assertEqual(len(result.duplicate_groups), 0)
+
+    def test_creation_time_is_unavailable_when_posix_has_no_birthtime(self) -> None:
+        stat = SimpleNamespace(st_ctime_ns=123)
+
+        self.assertIsNone(_created_ns(stat, platform_name="posix"))
+        self.assertEqual(_created_ns(stat, platform_name="nt"), 123)
 
 
 if __name__ == "__main__":

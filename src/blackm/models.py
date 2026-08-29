@@ -25,7 +25,7 @@ class AssetRecord:
     size_bytes: int
     sha256: str
     modified_ns: int
-    created_ns: int
+    created_ns: int | None
     audio: AudioInfo | None = None
 
     def to_dict(self) -> dict[str, object]:

@@ -37,11 +37,21 @@ def inspect_wav(path: Path) -> AudioInfo | None:
         return AudioInfo()
 
 
-def _created_ns(stat: os.stat_result) -> int:
+def _created_ns(stat: os.stat_result, *, platform_name: str = os.name) -> int | None:
+    birth_ns = getattr(stat, "st_birthtime_ns", None)
+    if birth_ns is not None:
+        return int(birth_ns)
+
     birth = getattr(stat, "st_birthtime", None)
     if birth is not None:
         return int(birth * 1_000_000_000)
-    return stat.st_ctime_ns
+
+    # On Windows, ctime is the creation time on Python versions that do not yet
+    # expose st_birthtime. On POSIX systems it is metadata-change time and must
+    # never be presented as creation time.
+    if platform_name == "nt":
+        return stat.st_ctime_ns
+    return None
 
 
 def _discover(root: Path, warnings: list[ScanWarning]) -> list[tuple[Path, Path]]:
@@ -104,7 +114,7 @@ def _inspect_file(source_root: Path, path: Path) -> AssetRecord:
 
 def scan_roots(roots: list[Path], workers: int | None = None) -> ScanResult:
     warnings: list[ScanWarning] = []
-    candidates: list[tuple[Path, Path]] = []
+    candidates_by_path: dict[str, tuple[Path, Path]] = {}
 
     normalized: list[Path] = []
     seen_roots: set[str] = set()
@@ -116,7 +126,15 @@ def scan_roots(roots: list[Path], workers: int | None = None) -> ScanResult:
             normalized.append(expanded)
 
     for root in normalized:
-        candidates.extend(_discover(root, warnings))
+        for source_root, path in _discover(root, warnings):
+            try:
+                canonical = path.resolve(strict=False)
+            except OSError:
+                canonical = path.absolute()
+            key = os.path.normcase(str(canonical))
+            candidates_by_path.setdefault(key, (source_root, path))
+
+    candidates = list(candidates_by_path.values())
 
     if workers is None:
         workers = min(8, (os.cpu_count() or 2) + 2)

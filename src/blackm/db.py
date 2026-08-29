@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS assets (
     size_bytes INTEGER NOT NULL,
     sha256 TEXT NOT NULL,
     modified_ns INTEGER NOT NULL,
-    created_ns INTEGER NOT NULL,
+    created_ns INTEGER,
     duration_seconds REAL,
     sample_rate INTEGER,
     channels INTEGER,
