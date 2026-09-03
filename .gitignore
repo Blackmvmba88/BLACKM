@@ -1,0 +1,12 @@
+.DS_Store
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.env.*
+!.env.example
+reports/*.json
+
+# Never commit local auth/session material
+.soundcloud-token.json
