@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "blackm-music-os"
+version = "0.1.0"
+description = "Local-first music operating system for BlackMamba RECORDS"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "httpx>=0.28,<1",
+  "rich>=13.9,<15",
+  "typer>=0.15,<1",
+]
+
+[project.scripts]
+bm = "blackm.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["blackm"]
