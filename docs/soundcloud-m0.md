@@ -1,8 +1,8 @@
-# SoundCloud M0 — Authenticate, inventory, audit
+# SoundCloud M0 → M1
 
-This milestone is intentionally read-only after authentication. It does not upload, edit, publish, or delete tracks.
+BLACKM treats SoundCloud as a remote system whose persisted state must be verified. M0 is read-only. M1 permits only explicitly planned metadata changes and certifies them with a fresh GET.
 
-## 1. Local install
+## Install
 
 ```bash
 git clone https://github.com/Blackmvmba88/BLACKM.git
@@ -12,15 +12,27 @@ source .venv/bin/activate
 python -m pip install -e .
 ```
 
-## 2. SoundCloud app credentials
+## Configure the existing SoundCloud app
 
-Configure the SoundCloud application with this callback URI (or another local callback that you also export below):
+The SoundCloud app must contain the exact callback URI used by BLACKM:
 
 ```text
 http://127.0.0.1:8765/callback
 ```
 
-Never commit real credentials.
+The safest interactive setup does not expose the client secret in shell history:
+
+```bash
+bm soundcloud configure
+```
+
+It stores the application credentials outside the repository at:
+
+```text
+~/.config/blackm/soundcloud-app.json
+```
+
+BLACKM writes the file atomically with mode `0600`. Environment variables override the stored values when needed:
 
 ```bash
 export SOUNDCLOUD_CLIENT_ID='...'
@@ -28,54 +40,52 @@ export SOUNDCLOUD_CLIENT_SECRET='...'
 export SOUNDCLOUD_REDIRECT_URI='http://127.0.0.1:8765/callback'
 ```
 
-## 3. Authenticate
+Never commit real credentials, tokens, audit output, or evidence output.
+
+## M0: authenticate and inventory
 
 ```bash
 bm soundcloud auth
+bm soundcloud me
+bm soundcloud tracks --limit 0
+bm soundcloud audit --limit 0
 ```
 
-BLACKM generates a PKCE verifier/challenge and CSRF state, opens SoundCloud authorization in the browser, receives the authorization code on the local callback, exchanges it for tokens, and stores the tokens at:
+The login uses OAuth 2.1 authorization code flow with PKCE S256 and a CSRF `state` value. Access and rotating single-use refresh tokens are stored outside the repository at:
 
 ```text
 ~/.config/blackm/soundcloud.json
 ```
 
-The token file is kept outside the repository and BLACKM attempts to set mode `0600`.
+`tracks --limit 0` follows SoundCloud's returned `next_href` until it is absent. It refuses pagination URLs outside `https://api.soundcloud.com`, fails on loops or duplicate track identities, and writes the complete raw records to:
 
-## 4. Verify account
-
-```bash
-bm soundcloud me
+```text
+reports/soundcloud-inventory.json
 ```
 
-## 5. Inspect track inventory
+`audit --limit 0` writes both the raw inventory and the structured audit:
 
-```bash
-bm soundcloud tracks --limit 50
-bm soundcloud tracks --limit 0
+```text
+reports/soundcloud-inventory.json
+reports/soundcloud-audit.json
 ```
 
-`--limit 0` means all tracks. Pagination follows SoundCloud's returned `next_href`; BLACKM does not synthesize offsets.
-
-## 6. Audit metadata
-
-```bash
-bm soundcloud audit --limit 0
-bm soundcloud audit --limit 0 --json-out reports/soundcloud-audit.json
-```
-
-M0 currently flags these fields when absent:
+The audit checks:
 
 - title
 - description
 - genre
+- tag list, malformed quoting, and duplicate tags
 - artwork
-- metadata artist
-- tags
+- explicit artist metadata and effective profile fallback
+- label when applicable
+- publisher metadata availability in the API response
+- permalink shape
+- release metadata completeness and date validity
 
-This is an audit policy, not a claim that every field is technically required by SoundCloud.
+Title, description, genre, tags, and artwork are the initial blocking completeness policy. Artist, label, publisher, permalink, and release metadata are conditional review fields so BLACKM does not invent business metadata that may not apply.
 
-## M0 success gate
+M0 succeeds only when:
 
 ```text
 AUTH_OK = true
@@ -85,16 +95,78 @@ METADATA_AUDIT_WRITTEN = true
 REMOTE_MUTATIONS = 0
 ```
 
-Only after this gate should M1 add controlled metadata writes.
+## M1: plan, dry-run, apply, certify
 
-## M1 — next
+M1 implements:
 
-Planned commands:
-
-```bash
-bm soundcloud metadata plan
-bm soundcloud metadata apply --dry-run
-bm soundcloud metadata apply --yes
+```text
+READ → PLAN → READ/DRY-RUN → WRITE → READ BACK → COMPARE → CERTIFY
 ```
 
-M1 should generate a proposed patch first, preserve the original values as evidence, and only then permit writes.
+Create a patch input. Every desired value must be explicit:
+
+```json
+{
+  "patches": [
+    {
+      "track": "soundcloud:tracks:123456789",
+      "changes": {
+        "description": "Official description",
+        "genre": "Reggae",
+        "tag_list": "\"Iyari Gomez\" \"BlackMamba Records\" reggae dub",
+        "metadata_artist": "Iyari Gomez",
+        "label_name": "BlackMamba RECORDS",
+        "release_date": "2026-09-03"
+      }
+    }
+  ]
+}
+```
+
+Build the plan from live SoundCloud state:
+
+```bash
+bm soundcloud metadata plan patches.json \
+  --out reports/soundcloud-metadata-plan.json
+```
+
+Re-read every track. This produces a receipt only if the live state still matches every `before` value in the plan:
+
+```bash
+bm soundcloud metadata dry-run reports/soundcloud-metadata-plan.json \
+  --receipt-out reports/soundcloud-metadata-dry-run.json
+```
+
+Apply requires both the matching receipt and an explicit acknowledgement:
+
+```bash
+bm soundcloud metadata apply reports/soundcloud-metadata-plan.json \
+  --receipt reports/soundcloud-metadata-dry-run.json \
+  --evidence-out reports/soundcloud-metadata-evidence.json \
+  --yes
+```
+
+For each operation BLACKM:
+
+1. reads the track again;
+2. blocks if it drifted since planning;
+3. sends only the planned JSON metadata fields;
+4. ignores HTTP 200 as proof of persistence;
+5. reads the track again;
+6. compares every requested field;
+7. writes evidence after each operation;
+8. stops at the first drift or uncertified result.
+
+Supported JSON repairs in this first M1 slice are `title`, `description`, `genre`, `tag_list`, `metadata_artist`, `label_name`, `release`, `release_date`, and `permalink`.
+
+Artwork needs a separate multipart implementation and is intentionally not writable yet. Publisher metadata is audited but not written because it is not part of SoundCloud's documented track metadata update schema.
+
+## Safety invariants
+
+- no track deletion;
+- no audio replacement;
+- no automatic publishing or uploads;
+- no writes without a plan, matching dry-run receipt, and `--yes`;
+- no bulk continuation after drift or failed certification;
+- no secrets in Git;
+- generated inventories, plans, receipts, and evidence remain ignored by Git.
