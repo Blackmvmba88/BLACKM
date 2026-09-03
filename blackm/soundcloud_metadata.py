@@ -149,20 +149,33 @@ def create_plan(
         if not isinstance(patch, dict):
             raise SoundCloudError("Each patch must be a JSON object.")
         track_ref = patch.get("track") or patch.get("track_ref") or patch.get("urn") or patch.get("id")
-        if track_ref in {None, ""}:
+        if track_ref is None or track_ref == "":
             raise SoundCloudError("Each patch must identify a track.")
         changes = _validate_changes(patch.get("changes"))
         live = client.get_track(track_ref)
         owner = live.get("user") if isinstance(live.get("user"), dict) else {}
-        if account.get("id") is not None and owner.get("id") not in {
-            None,
-            account.get("id"),
-        }:
-            raise SoundCloudError(f"Track {track_ref} is not owned by the authenticated account.")
+        if (
+            account.get("id") is not None
+            and owner.get("id") != account.get("id")
+        ):
+            raise SoundCloudError(
+                f"Track {track_ref} is not owned by the authenticated account."
+            )
         identity = str(live.get("urn") or live.get("id") or track_ref)
         if identity in seen:
             raise SoundCloudError(f"Track {identity} appears more than once in the patch input.")
         seen.add(identity)
+        before = {field: read_field(live, field) for field in changes}
+        unchanged = sorted(
+            field
+            for field, value in changes.items()
+            if comparable(field, before[field]) == comparable(field, value)
+        )
+        if unchanged:
+            raise SoundCloudError(
+                f"Track {identity} contains no-op fields: "
+                + ", ".join(unchanged)
+            )
         operations.append(
             {
                 "track": identity,
@@ -170,9 +183,7 @@ def create_plan(
                 "urn": live.get("urn"),
                 "title": live.get("title"),
                 "permalink_url": live.get("permalink_url"),
-                "before": {
-                    field: read_field(live, field) for field in changes
-                },
+                "before": before,
                 "changes": changes,
                 "state": "planned",
             }
