@@ -582,9 +582,11 @@ def audit_track(
         issues.append(_issue("artwork", "missing", "error", "No artwork is set."))
 
     explicit_artist = track.get("metadata_artist")
-    uploader = (track.get("user") or {}).get("username") if isinstance(
-        track.get("user"), dict
-    ) else account.get("username")
+    uploader = (
+        (track.get("user") or {}).get("username")
+        if isinstance(track.get("user"), dict)
+        else None
+    ) or account.get("username")
     if _blank(explicit_artist):
         states["artist_metadata"] = "profile_fallback" if uploader else "missing"
         issues.append(
@@ -668,9 +670,18 @@ def audit_track(
         "needs_review": bool(blocking or warnings),
         "repairable_fields": sorted(
             {
-                item["field"]
+                (
+                    "metadata_artist"
+                    if item["field"] == "artist_metadata"
+                    else item["field"]
+                )
                 for item in blocking + warnings
-                if item["field"] in WRITABLE_METADATA_FIELDS
+                if (
+                    "metadata_artist"
+                    if item["field"] == "artist_metadata"
+                    else item["field"]
+                )
+                in WRITABLE_METADATA_FIELDS
             }
         ),
         "snapshot": {
