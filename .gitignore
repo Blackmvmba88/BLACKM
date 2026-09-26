@@ -1,14 +1,12 @@
+.DS_Store
+.venv/
 __pycache__/
 *.py[cod]
-*.egg-info/
-.venv/
-venv/
-.env
-.DS_Store
 .pytest_cache/
-.coverage
-htmlcov/
-*.db
-*.db-shm
-*.db-wal
-.blackm/
+.env
+.env.*
+!.env.example
+reports/*.json
+
+# Never commit local auth/session material
+.soundcloud-token.json

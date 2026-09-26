@@ -1,19 +1,21 @@
 [build-system]
-requires = ["setuptools>=69"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
 
 [project]
-name = "blackm"
+name = "blackm-music-os"
 version = "0.1.0"
-description = "BlackMamba Music OS — local-first catalog, rescue, curation and automation infrastructure."
+description = "Local-first music operating system for BlackMamba RECORDS"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
-authors = [{name = "BlackMamba"}]
-dependencies = []
+dependencies = [
+  "httpx>=0.28,<1",
+  "rich>=13.9,<15",
+  "typer>=0.15,<1",
+]
 
 [project.scripts]
-bm = "blackm.cli:main"
+bm = "blackm.cli:app"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.hatch.build.targets.wheel]
+packages = ["blackm"]
